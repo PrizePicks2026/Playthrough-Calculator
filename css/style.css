@@ -88,6 +88,22 @@
     text-transform: uppercase;
     color: var(--muted);
   }
+  .brandbar-right{ display:flex; align-items:center; gap: 16px; }
+  .reboots-btn{
+    display:inline-flex; align-items:center;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: #cdbfff;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 12.5px;
+    padding: 8px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all .12s ease;
+  }
+  .reboots-btn:hover{ background: var(--accent-soft); box-shadow: 0 0 18px -4px rgba(124,92,252,0.55); }
   .brandbar-tag{
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
