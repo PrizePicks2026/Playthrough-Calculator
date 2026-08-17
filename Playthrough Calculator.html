@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Playthrough Requirement Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0a0b14;
+    --panel: #12131f;
+    --panel-2: #171827;
+    --border: #23253a;
+    --accent: #7c5cfc;
+    --accent-soft: rgba(124,92,252,0.15);
+    --good: #34d399;
+    --good-soft: rgba(52,211,153,0.12);
+    --bad: #f87171;
+    --bad-soft: rgba(248,113,113,0.1);
+    --amber: #fbbf24;
+    --text: #eef0f7;
+    --muted: #8b8fa3;
+    --muted-2: #565a72;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(1200px 700px at 88% -12%, rgba(124,92,252,0.28), transparent 55%),
+      radial-gradient(900px 600px at 8% 12%, rgba(124,92,252,0.14), transparent 55%),
+      radial-gradient(800px 500px at -10% 100%, rgba(124,92,252,0.08), transparent 60%),
+      radial-gradient(600px 400px at 100% 60%, rgba(124,92,252,0.10), transparent 55%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 0 24px 80px;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::before{
+    content:"";
+    position: fixed;
+    top: -20%; left: 50%;
+    width: 900px; height: 900px;
+    transform: translateX(-50%);
+    background: radial-gradient(circle, rgba(124,92,252,0.16), transparent 65%);
+    filter: blur(40px);
+    pointer-events: none;
+    z-index: 0;
+    animation: ambientPulse 8s ease-in-out infinite;
+  }
+  @keyframes ambientPulse{
+    0%, 100%{ opacity: 0.7; transform: translateX(-50%) scale(1); }
+    50%{ opacity: 1; transform: translateX(-50%) scale(1.06); }
+  }
+  @keyframes glowPulse{
+    0%, 100%{ box-shadow: 0 0 0 0 rgba(124,92,252,0.0), 0 8px 24px -8px rgba(124,92,252,0.6); }
+    50%{ box-shadow: 0 0 24px 2px rgba(124,92,252,0.35), 0 8px 28px -6px rgba(124,92,252,0.75); }
+  }
+
+  /* Top brand bar, PrizePicks-style */
+  .brandbar{
+    position: relative; z-index: 1;
+    max-width: 1120px; margin: 0 auto;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 22px 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 36px;
+  }
+  .brand{ display:flex; align-items:center; gap: 12px; }
+  .brand-mark{
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: linear-gradient(145deg, #8f6bff, #6c3ff0);
+    display:flex; align-items:center; justify-content:center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 17px;
+    color: #fff;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset, 0 6px 18px -4px rgba(124,92,252,0.75);
+    flex-shrink: 0;
+  }
+  .brand-text{ line-height: 1.15; }
+  .brand-name{
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.01em;
+  }
+  .brand-sub{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .brandbar-tag{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display:flex; align-items:center; gap:8px;
+  }
+  .brandbar-tag .dot{
+    width:7px; height:7px; border-radius:50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px 2px rgba(124,92,252,0.8);
+  }
+  .wrap{ max-width: 1120px; margin: 0 auto; padding-top: 40px; position: relative; z-index: 1; }
+
+  header{ margin-bottom: 40px; }
+  .eyebrow{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display:flex; align-items:center; gap:8px;
+    margin-bottom: 14px;
+  }
+  .eyebrow::before{
+    content:""; width:6px; height:6px; border-radius:50%;
+    background: var(--accent); box-shadow: 0 0 12px var(--accent);
+  }
+  h1{
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: clamp(28px, 4vw, 40px);
+    margin: 0 0 12px;
+    letter-spacing: -0.02em;
+    background: linear-gradient(90deg, #fff, #cdbfff 60%, #8f6bff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  header p{
+    color: var(--muted);
+    font-size: 15px;
+    line-height: 1.6;
+    max-width: 680px;
+    margin: 0;
+  }
+  header p b{ color: var(--text); font-weight: 600; }
+
+  .grid{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 880px){ .grid{ grid-template-columns: 1fr; } }
+
+  .panel{
+    background: linear-gradient(180deg, var(--panel-2), var(--panel));
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    position: relative;
+    z-index: 1;
+    transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+  }
+  .panel:hover{
+    border-color: rgba(124,92,252,0.45);
+    box-shadow: 0 0 0 1px rgba(124,92,252,0.12), 0 20px 50px -24px rgba(124,92,252,0.55);
+  }
+  .panel.full{ margin-top: 24px; }
+  .panel h2{
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+  .panel .sub{
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0 0 20px;
+    line-height: 1.5;
+  }
+
+  label{
+    display:block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+  }
+  .text-input{
+    width:100%;
+    background: #0d0e18;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family:'Inter', sans-serif;
+    font-size: 14px;
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .text-input:focus{ border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  textarea{
+    width: 100%;
+    min-height: 220px;
+    background: #0d0e18;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    padding: 14px 16px;
+    resize: vertical;
+    outline: none;
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  textarea::placeholder{ color: var(--muted-2); }
+  textarea:focus{
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  button.primary{
+    margin-top: 18px;
+    width: 100%;
+    background: linear-gradient(135deg, #8f6bff, #7c5cfc);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    padding: 14px;
+    cursor: pointer;
+    transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+    box-shadow: 0 8px 24px -8px rgba(124,92,252,0.6);
+    animation: glowPulse 3.2s ease-in-out infinite;
+  }
+  button.primary:hover{ background: linear-gradient(135deg, #9c7bff, #8c6bff); transform: translateY(-1px); animation-play-state: paused; box-shadow: 0 0 28px 4px rgba(124,92,252,0.5), 0 10px 26px -6px rgba(124,92,252,0.7); }
+  button.primary:active{ transform: translateY(0); }
+
+  .clear-btn{
+    margin-top: 10px;
+    width: 100%;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    padding: 10px;
+    cursor: pointer;
+    transition: color .12s ease, border-color .12s ease;
+  }
+  .clear-btn:hover{ color: var(--text); border-color: var(--muted-2); }
+
+  /* Results panel */
+  .ring-row{
+    display:flex;
+    align-items:center;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+  .ring-wrap{ position: relative; width: 128px; height: 128px; flex-shrink:0; }
+  svg.ring{ transform: rotate(-90deg); }
+  .ring-bg{ fill:none; stroke: var(--border); stroke-width: 10; }
+  .ring-fg{ fill:none; stroke: var(--accent); stroke-width: 10; stroke-linecap: round; transition: stroke-dashoffset .6s cubic-bezier(.4,0,.2,1), stroke .3s ease; filter: drop-shadow(0 0 8px rgba(124,92,252,0.65)); }
+  .ring-center{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .ring-pct{ font-family:'JetBrains Mono', monospace; font-weight:700; font-size: 22px; }
+  .ring-label{ font-size: 10px; color: var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-top:2px; }
+
+  .status-block .status{
+    font-family:'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    margin-bottom: 6px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .status.pending{ color: var(--text); }
+  .status.cleared{ color: var(--good); text-shadow: 0 0 16px rgba(52,211,153,0.5); }
+  .status-block .detail{ color: var(--muted); font-size: 13px; line-height:1.5; }
+  .status-block .detail b{ color: var(--text); font-family:'JetBrains Mono', monospace; }
+
+  .stat-row{
+    display:grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .stat{
+    background: #0d0e18;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 14px;
+    transition: border-color .2s ease, box-shadow .2s ease;
+  }
+  .stat:hover{ border-color: rgba(124,92,252,0.4); box-shadow: 0 0 16px -4px rgba(124,92,252,0.45); }
+  .stat .k{ font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+  .stat .v{ font-family:'JetBrains Mono', monospace; font-size: 17px; font-weight: 700; }
+  .stat .v.good{ color: var(--good); }
+  .stat .v.accent{ color: var(--accent); }
+  .stat .v.amber{ color: var(--amber); }
+
+  .section-title{
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: var(--muted);
+    margin: 22px 0 10px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .section-title .count{
+    font-family:'JetBrains Mono', monospace;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    color: var(--text);
+  }
+  .section-note{
+    font-size: 11.5px;
+    color: var(--muted-2);
+    margin: -6px 0 10px;
+    line-height: 1.5;
+  }
+
+  table{ width:100%; border-collapse: collapse; font-size: 12.5px; }
+  table td, table th{ padding: 8px 6px; text-align:left; }
+  table th{ color: var(--muted-2); font-weight:500; font-size: 11px; text-transform:uppercase; letter-spacing:.04em; border-bottom: 1px solid var(--border); }
+  table tbody tr{ border-bottom: 1px solid #1a1c2c; }
+  table tbody tr:last-child{ border-bottom:none; }
+  td.amt{ font-family:'JetBrains Mono', monospace; }
+  td.amt.neg{ color: var(--bad); }
+  td.amt.pos{ color: var(--good); }
+  td.amt.accent{ color: var(--accent); }
+  td.id, td.time{ color: var(--muted); font-family:'JetBrains Mono', monospace; font-size: 11.5px; }
+  .tag{
+    font-family:'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    background: var(--accent-soft);
+    color: #b6a5ff;
+  }
+
+  .empty-state{
+    text-align:center;
+    padding: 32px 20px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .empty-state .big{
+    font-family:'Space Grotesk', sans-serif;
+    font-size: 15px;
+    color: var(--text);
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .footnote{
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--muted-2);
+    font-size: 12px;
+    line-height: 1.7;
+  }
+  .footnote b{ color: var(--muted); }
+
+  .scroll-box{ max-height: 220px; overflow-y: auto; }
+  .scroll-box::-webkit-scrollbar{ width: 6px; }
+  .scroll-box::-webkit-scrollbar-thumb{ background: var(--border); border-radius: 3px; }
+
+  /* Spiel generator */
+  .spiel-head{
+    display:flex; align-items:center; justify-content:space-between; gap: 16px; flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .toggle-row{ display:flex; gap: 8px; }
+  .toggle-btn{
+    background: #0d0e18;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Inter', sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .12s ease;
+  }
+  .toggle-btn.active{
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: #cdbfff;
+    box-shadow: 0 0 14px -2px rgba(124,92,252,0.55);
+  }
+  .name-field{ display:flex; align-items:center; gap: 10px; }
+  .name-field label{ margin: 0; white-space: nowrap; }
+  .name-field input{ width: 180px; }
+
+  .spiel-box{
+    background: #0d0e18;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    font-size: 13.5px;
+    line-height: 1.7;
+    color: var(--text);
+    white-space: pre-wrap;
+    min-height: 120px;
+  }
+  .spiel-box.empty{ color: var(--muted-2); font-style: italic; }
+
+  .copy-btn{
+    margin-top: 14px;
+    background: transparent;
+    border: 1px solid var(--accent);
+    color: #cdbfff;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .12s ease;
+  }
+  .copy-btn:hover{ background: var(--accent-soft); box-shadow: 0 0 18px -4px rgba(124,92,252,0.55); }
+  .copy-btn.copied{ background: var(--good-soft); border-color: var(--good); color: var(--good); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brandbar">
+    <div class="brand">
+      <div class="brand-mark">P</div>
+      <div class="brand-text">
+        <div class="brand-name">PRIZEPICKS</div>
+        <div class="brand-sub">Playthrough Tracker</div>
+      </div>
+    </div>
+    <div class="brandbar-tag"><span class="dot"></span>Internal Tool</div>
+  </div>
+
+  <div style="background: var(--bad-soft); border: 1px solid var(--bad); border-radius: 10px; padding: 12px 16px; margin-bottom: 28px; font-family:'JetBrains Mono', monospace; font-size: 12.5px; letter-spacing: 0.02em; color: var(--bad); text-align:center; text-transform: uppercase;">
+    ⚠ For internal use only &mdash; do not screenshot
+  </div>
+
+  <header>
+    <div class="eyebrow">Playthrough Tracker</div>
+    <h1>Playthrough Requirement Check</h1>
+    <p>Every deposit &mdash; bonus or not &mdash; requires a 1x playthrough before it can be withdrawn. Paste your transaction history below: this tool breaks the requirement out <b>per deposit</b> so you can see exactly which deposits are cleared, which are still pending, and flags any withdrawal that happened before its deposit finished playthrough.</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- INPUT PANEL -->
+    <div class="panel">
+      <h2>Paste your transactions</h2>
+      <p class="sub">Copy the rows straight from the Transactions table and paste them here &mdash; formatting is handled automatically.</p>
+      <label for="txInput">Transaction history</label>
+      <textarea id="txInput" placeholder="3256749390&#9;-$1&#10;lineup placed&#10;Credit&#10;$36&#9;-$0&#10;August 16, 2026&#10;6:25:59 PM ET&#10;1740390486&#10;&#10;..."></textarea>
+
+      <button class="primary" onclick="calculate()">Calculate playthrough</button>
+      <button class="clear-btn" onclick="clearAll()">Clear</button>
+    </div>
+
+    <!-- RESULTS PANEL -->
+    <div class="panel" id="resultsPanel">
+      <h2>Progress</h2>
+      <p class="sub">Based on your most recent deposit. Every deposit's own status is listed individually below.</p>
+
+      <div id="emptyState" class="empty-state">
+        <div class="big">Nothing calculated yet</div>
+        Paste your transactions and hit Calculate.
+      </div>
+
+      <div id="resultsBody" style="display:none;">
+        <div class="ring-row">
+          <div class="ring-wrap">
+            <svg class="ring" width="128" height="128" viewBox="0 0 128 128">
+              <circle class="ring-bg" cx="64" cy="64" r="54"></circle>
+              <circle class="ring-fg" id="ringFg" cx="64" cy="64" r="54" stroke-dasharray="339.29" stroke-dashoffset="339.29"></circle>
+            </svg>
+            <div class="ring-center">
+              <div class="ring-pct" id="ringPct">0%</div>
+              <div class="ring-label">Cleared</div>
+            </div>
+          </div>
+          <div class="status-block">
+            <div class="status pending" id="statusLine">&mdash;</div>
+            <div class="detail" id="statusDetail">&mdash;</div>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat">
+            <div class="k">Requirement</div>
+            <div class="v" id="statReq">$0.00</div>
+          </div>
+          <div class="stat">
+            <div class="k">Played through</div>
+            <div class="v accent" id="statPlayed">$0.00</div>
+          </div>
+          <div class="stat">
+            <div class="k">Remaining</div>
+            <div class="v amber" id="statRemaining">$0.00</div>
+          </div>
+        </div>
+
+        <div id="withdrawalWarning" style="display:none; background: var(--bad-soft); border: 1px solid var(--bad); border-radius: 10px; padding: 14px 16px; margin-bottom: 22px; font-size: 13px; line-height: 1.6; color: var(--text);"></div>
+
+        <div class="section-title">
+          Deposits &mdash; playthrough by deposit
+          <span class="count" id="depositCount">0</span>
+        </div>
+        <p class="section-note">Each deposit is tracked independently: play activity only credits whichever deposit was most recent at the time it happened. If a newer deposit comes in, an older deposit's unmet remaining is <b>not</b> backfilled by later play.</p>
+        <div class="scroll-box">
+          <table id="depositTable">
+            <thead><tr><th>ID</th><th>Amount</th><th>Played</th><th>Remaining</th><th>Status</th><th>Time</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="section-title">
+          Withdrawals before playthrough complete
+          <span class="count" id="flaggedCount">0</span>
+        </div>
+        <p class="section-note">Withdrawals that were made while one or more deposits still had an outstanding playthrough requirement.</p>
+        <div class="scroll-box">
+          <table id="flaggedTable">
+            <thead><tr><th>ID</th><th>Withdrawal amt</th><th>Outstanding at the time</th><th>Time</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="section-title">
+          Counted toward playthrough
+          <span class="count" id="countedCount">0</span>
+        </div>
+        <p class="section-note">Every Lineup Placed and Predict Market Buy. Both count in full even if later refunded.</p>
+        <div class="scroll-box">
+          <table id="countedTable">
+            <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Time</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="section-title">
+          Refunded lineups (still count in full)
+          <span class="count" id="refundCount">0</span>
+        </div>
+        <p class="section-note">These credited money back to the balance, but the original playthrough credit above is not reduced.</p>
+        <div class="scroll-box">
+          <table id="refundTable">
+            <thead><tr><th>ID</th><th>Amount</th><th>Time</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="section-title">
+          Excluded &mdash; not playthrough eligible
+          <span class="count" id="excludedCount">0</span>
+        </div>
+        <div class="scroll-box">
+          <table id="excludedTable">
+            <thead><tr><th>ID</th><th>Type</th><th>Amount</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SPIEL GENERATOR -->
+  <div class="panel full">
+    <div class="spiel-head">
+      <div>
+        <h2>Member spiel generator</h2>
+        <p class="sub" style="margin-bottom:0;">Calculate a member's playthrough above, then generate a ready-to-send explanation.</p>
+      </div>
+      <div class="name-field">
+        <label for="memberName">Member name</label>
+        <input class="text-input" id="memberName" type="text" placeholder="there" oninput="renderSpiel()">
+      </div>
+    </div>
+
+    <div class="toggle-row" style="margin-bottom:16px;">
+      <button class="toggle-btn active" id="btnPending" onclick="setSpielMode('pending')">Still needs playthrough</button>
+      <button class="toggle-btn" id="btnCleared" onclick="setSpielMode('cleared')">Cleared / eligible</button>
+    </div>
+
+    <div class="spiel-box empty" id="spielBox">Calculate a member's transactions above to generate a spiel.</div>
+    <button class="copy-btn" id="copyBtn" onclick="copySpiel()">Copy to clipboard</button>
+  </div>
+
+  <div class="footnote">
+    <b>How this is calculated:</b> every deposit requires a 1x playthrough before it's eligible for withdrawal, whether or not it carried a Deposit Bonus. The <b>Progress</b> panel above reflects your <b>most recent deposit only</b>. The <b>Deposits</b> table tracks every deposit independently: play activity (<b>Lineup Placed</b> and <b>Predict Market Buy</b>) only credits whichever deposit was the most recent one at the time &mdash; once a newer deposit comes in, later play stops crediting the older one, so an older deposit's remaining amount is never backfilled by later play. If a lineup is later refunded, the amount already credited toward playthrough is not clawed back. Any <b>Withdrawal</b> that happened while any deposit still had an outstanding requirement is called out separately below, since that's a case where funds went out before playthrough on a deposit was fully met. <b>Withdrawal Refund</b> entries are excluded since the funds never actually left the account. If a deposit was made via bank transfer, remember it's also subject to a separate 72-hour security hold regardless of playthrough status.
+  </div>
+
+</div>
+
+<script>
+let lastResult = null;
+let spielMode = 'pending';
+
+function parseTransactions(raw){
+  const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  const records = [];
+
+  for (let i = 0; i < lines.length; i++){
+    if (lines[i].toLowerCase() === 'credit'){
+      const idAmountLine = lines[i-2];
+      const typeLine = lines[i-1];
+      const dateLine = lines[i+2];
+      const timeLine = lines[i+3];
+      if (!idAmountLine || !typeLine) continue;
+
+      const idMatch = idAmountLine.match(/(\d{4,})/);
+      const amtMatch = idAmountLine.match(/(-?\$[\d,]+(?:\.\d+)?)/);
+      if (!idMatch || !amtMatch) continue;
+
+      const id = idMatch[1];
+      const amount = parseFloat(amtMatch[1].replace(/[$,]/g, ''));
+      const type = typeLine.trim();
+
+      let dateObj = null;
+      let time = timeLine || '';
+      if (dateLine && timeLine){
+        const cleanTime = timeLine.replace(/\s+[A-Z]{2,4}$/, ''); // strip trailing timezone abbrev
+        const parsed = new Date(`${dateLine} ${cleanTime}`);
+        if (!isNaN(parsed.getTime())){
+          dateObj = parsed;
+          time = `${dateLine}, ${timeLine}`;
+        }
+      }
+
+      records.push({ id, amount, type, time, dateObj, order: i });
+    }
+  }
+  return records;
+}
+
+function classify(type){
+  const t = type.toLowerCase();
+  const isDeposit = t.includes('deposit') && !t.includes('withdrawal');
+  const isLineupPlaced = t.includes('lineup') && t.includes('placed');
+  const isMarketBuy = t.includes('buy');
+  const isLineupRefund = t.includes('lineup') && (t.includes('refund') || t.includes('void') || t.includes('cancel'));
+  const isWithdrawalRefund = t.includes('withdrawal') && t.includes('refund');
+  const isWithdrawal = t.includes('withdrawal') && !t.includes('refund');
+  return { isDeposit, isLineupPlaced, isMarketBuy, isLineupRefund, isWithdrawal, isWithdrawalRefund };
+}
+
+function calculate(){
+  const raw = document.getElementById('txInput').value;
+
+  if (!raw.trim()){
+    alert('Paste your transaction history first.');
+    return;
+  }
+
+  const records = parseTransactions(raw);
+  if (records.length === 0){
+    alert("Couldn't read any transactions from that paste. Make sure you copied the full rows including the \"Credit\" line.");
+    return;
+  }
+
+  const deposits = [];
+  const counted = [];
+  const refunds = [];
+  const withdrawals = [];
+  const excluded = [];
+  const classified = [];
+
+  records.forEach(r => {
+    const c = classify(r.type);
+    let kind = 'excluded';
+    let tag = null;
+    if (c.isDeposit){ kind = 'deposit'; }
+    else if (c.isLineupPlaced){ kind = 'play'; tag = 'Lineup Placed'; }
+    else if (c.isMarketBuy){ kind = 'play'; tag = 'Predict Market Buy'; }
+    else if (c.isLineupRefund){ kind = 'lineupRefund'; }
+    else if (c.isWithdrawal){ kind = 'withdrawal'; }
+    else if (c.isWithdrawalRefund){ kind = 'withdrawalRefund'; }
+    const rec = Object.assign({}, r, { kind, tag });
+    classified.push(rec);
+    if (kind === 'deposit') deposits.push(rec);
+    else if (kind === 'play') counted.push(rec);
+    else if (kind === 'lineupRefund') refunds.push(rec);
+    else if (kind === 'withdrawal') withdrawals.push(rec);
+    else if (kind === 'excluded' || kind === 'withdrawalRefund') excluded.push(rec);
+  });
+
+  if (deposits.length === 0){
+    alert("No deposit transactions were found in this paste, so there's nothing to set a playthrough requirement against.");
+    return;
+  }
+
+  // Put everything in chronological (oldest-first) order so play activity and
+  // withdrawals can be applied against deposits in the order they actually
+  // happened. Prefer real parsed timestamps; where those aren't available,
+  // fall back to the pasted order (transaction history exports newest-first,
+  // so a higher `order` index means older).
+  const chronological = classified.slice().sort((a, b) => {
+    if (a.dateObj && b.dateObj) return a.dateObj - b.dateObj;
+    return b.order - a.order;
+  });
+
+  // Independent per-deposit tracking: play activity only ever credits
+  // whichever deposit was most recently made at the time it happened.
+  // Once a new deposit comes in, later play credits that new deposit —
+  // any leftover/remaining requirement on an older deposit is NOT carried
+  // forward or backfilled by later play. Each deposit stands on its own.
+  const allDeposits = [];
+  const flaggedWithdrawals = [];
+  let currentDeposit = null;
+
+  chronological.forEach(r => {
+    if (r.kind === 'deposit'){
+      const dep = { ref: r, amount: Math.abs(r.amount), played: 0 };
+      allDeposits.push(dep);
+      currentDeposit = dep;
+    } else if (r.kind === 'play'){
+      if (currentDeposit){
+        currentDeposit.played += Math.abs(r.amount);
+      }
+      // play activity before any deposit has ever been made has nothing to credit.
+    } else if (r.kind === 'withdrawal'){
+      const outstanding = allDeposits.reduce((sum, d) => sum + Math.max(0, d.amount - d.played), 0);
+      if (outstanding > 0.005){
+        flaggedWithdrawals.push({ ref: r, outstanding });
+      }
+    }
+  });
+
+  allDeposits.forEach(d => {
+    d.remaining = Math.max(0, d.amount - d.played);
+    d.cleared = d.remaining <= 0.005;
+  });
+
+  // The Progress panel reflects the latest deposit only — not a sum across
+  // every deposit. Older deposits (and any still-pending amounts on them)
+  // are visible individually in the deposits table below.
+  const latestDeposit = allDeposits[allDeposits.length - 1];
+  const requirement = latestDeposit.amount;
+  const played = Math.min(latestDeposit.played, requirement);
+  const remaining = latestDeposit.remaining;
+  const cleared = latestDeposit.cleared;
+  const pct = requirement > 0 ? Math.min(100, (played / requirement) * 100) : 0;
+
+  lastResult = { requirement, played, remaining, cleared, flaggedWithdrawals };
+
+  // Ring
+  const circumference = 339.29;
+  const offset = circumference - (pct / 100) * circumference;
+  const ringFg = document.getElementById('ringFg');
+  ringFg.style.strokeDashoffset = offset;
+  ringFg.style.stroke = cleared ? 'var(--good)' : 'var(--accent)';
+  document.getElementById('ringPct').textContent = Math.round(pct) + '%';
+
+  const statusLine = document.getElementById('statusLine');
+  const statusDetail = document.getElementById('statusDetail');
+  if (cleared){
+    statusLine.className = 'status cleared';
+    statusLine.textContent = '✓ Playthrough cleared';
+    statusDetail.innerHTML = `Played through <b>$${played.toFixed(2)}</b> of the required <b>$${requirement.toFixed(2)}</b> on the most recent deposit. Eligible for withdrawal (subject to any active 72-hour hold).`;
+  } else {
+    statusLine.className = 'status pending';
+    statusLine.textContent = 'Playthrough in progress';
+    statusDetail.innerHTML = `Still needs <b>$${remaining.toFixed(2)}</b> more in play on the most recent deposit before those funds clear for withdrawal.`;
+  }
+
+  document.getElementById('statReq').textContent = '$' + requirement.toFixed(2);
+  document.getElementById('statPlayed').textContent = '$' + played.toFixed(2);
+  const remEl = document.getElementById('statRemaining');
+  remEl.textContent = '$' + remaining.toFixed(2);
+  remEl.className = 'v ' + (cleared ? 'good' : 'amber');
+
+  // Withdrawal warning banner — this stays based on ALL deposits (not just
+  // the latest), since it's flagging a compliance issue: a withdrawal that
+  // went out while some deposit, anywhere in the history, still owed play.
+  const warnEl = document.getElementById('withdrawalWarning');
+  if (flaggedWithdrawals.length > 0){
+    warnEl.style.display = 'block';
+    warnEl.innerHTML = `⚠ <b>${flaggedWithdrawals.length} withdrawal(s)</b> occurred while a deposit still had an outstanding playthrough requirement — see the table below.`;
+  } else {
+    warnEl.style.display = 'none';
+    warnEl.innerHTML = '';
+  }
+
+  // Deposit table — newest first, each row shows its own played/remaining/status.
+  const depositBody = document.querySelector('#depositTable tbody');
+  const displayDeposits = allDeposits.slice().reverse();
+  depositBody.innerHTML = displayDeposits.length ? displayDeposits.map(d => {
+    const isCleared = d.remaining <= 0.005;
+    return `
+    <tr>
+      <td class="id">${d.ref.id}</td>
+      <td class="amt pos">+$${d.amount.toFixed(2)}</td>
+      <td class="amt accent">$${d.played.toFixed(2)}</td>
+      <td class="amt ${isCleared ? '' : 'neg'}">$${d.remaining.toFixed(2)}</td>
+      <td>${isCleared ? '<span class="tag" style="background:var(--good-soft); color:var(--good);">Cleared</span>' : '<span class="tag" style="background:var(--bad-soft); color:var(--bad);">Pending</span>'}</td>
+      <td class="time">${d.ref.time}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="6" style="color:var(--muted-2); padding:14px 6px;">No deposit entries found.</td></tr>`;
+  document.getElementById('depositCount').textContent = allDeposits.length;
+
+  // Flagged withdrawals table
+  const flaggedBody = document.querySelector('#flaggedTable tbody');
+  const displayFlagged = flaggedWithdrawals.slice().reverse();
+  flaggedBody.innerHTML = displayFlagged.length ? displayFlagged.map(f => `
+    <tr>
+      <td class="id">${f.ref.id}</td>
+      <td class="amt neg">-$${Math.abs(f.ref.amount).toFixed(2)}</td>
+      <td class="amt neg">$${f.outstanding.toFixed(2)}</td>
+      <td class="time">${f.ref.time}</td>
+    </tr>`).join('') : `<tr><td colspan="4" style="color:var(--muted-2); padding:14px 6px;">No withdrawals before playthrough completed.</td></tr>`;
+  document.getElementById('flaggedCount').textContent = flaggedWithdrawals.length;
+
+  // Counted table
+  const countedBody = document.querySelector('#countedTable tbody');
+  countedBody.innerHTML = counted.length ? counted.map(r => `
+    <tr>
+      <td class="id">${r.id}</td>
+      <td><span class="tag">${r.tag}</span></td>
+      <td class="amt neg">-$${Math.abs(r.amount).toFixed(2)}</td>
+      <td class="time">${r.time}</td>
+    </tr>`).join('') : `<tr><td colspan="4" style="color:var(--muted-2); padding:14px 6px;">No lineup or market buy entries found.</td></tr>`;
+  document.getElementById('countedCount').textContent = counted.length;
+
+  // Refund table
+  const refundBody = document.querySelector('#refundTable tbody');
+  refundBody.innerHTML = refunds.length ? refunds.map(r => `
+    <tr>
+      <td class="id">${r.id}</td>
+      <td class="amt pos">+$${Math.abs(r.amount).toFixed(2)}</td>
+      <td class="time">${r.time}</td>
+    </tr>`).join('') : `<tr><td colspan="3" style="color:var(--muted-2); padding:14px 6px;">No refunded lineups found.</td></tr>`;
+  document.getElementById('refundCount').textContent = refunds.length;
+
+  // Excluded table
+  const excludedBody = document.querySelector('#excludedTable tbody');
+  excludedBody.innerHTML = excluded.length ? excluded.map(r => `
+    <tr>
+      <td class="id">${r.id}</td>
+      <td>${r.type}</td>
+      <td class="amt ${r.amount < 0 ? 'neg' : 'pos'}">${r.amount < 0 ? '-' : '+'}$${Math.abs(r.amount).toFixed(2)}</td>
+    </tr>`).join('') : `<tr><td colspan="3" style="color:var(--muted-2); padding:14px 6px;">Nothing excluded.</td></tr>`;
+  document.getElementById('excludedCount').textContent = excluded.length;
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('resultsBody').style.display = 'block';
+
+  setSpielMode(cleared ? 'cleared' : 'pending');
+}
+
+function setSpielMode(mode){
+  spielMode = mode;
+  document.getElementById('btnPending').classList.toggle('active', mode === 'pending');
+  document.getElementById('btnCleared').classList.toggle('active', mode === 'cleared');
+  renderSpiel();
+}
+
+function renderSpiel(){
+  const box = document.getElementById('spielBox');
+  if (!lastResult){
+    box.className = 'spiel-box empty';
+    box.textContent = "Calculate a member's transactions above to generate a spiel.";
+    return;
+  }
+
+  const name = document.getElementById('memberName').value.trim() || 'there';
+  const req = lastResult.requirement.toFixed(2);
+  const played = lastResult.played.toFixed(2);
+  const remaining = lastResult.remaining.toFixed(2);
+
+  let text = '';
+  if (spielMode === 'cleared'){
+    text = `Hi ${name}, thanks for reaching out! Good news — your most recent deposit has cleared its playthrough requirement. Every deposit needs a 1x playthrough before it's eligible for withdrawal, and you've played through $${played} against the $${req} required on that deposit, so you're all set on that front.
+
+If this deposit came in via bank transfer, keep in mind funds are also subject to a standard 72-hour security hold, separate from playthrough. Outside of that, you're clear to withdraw. Let me know if you have any other questions!`;
+  } else {
+    text = `Hi ${name}, thanks for reaching out about your withdrawal. Every deposit requires a 1x playthrough before those funds become eligible to withdraw — for your most recent deposit, that's $${req} required.
+
+Right now you've played through $${played}, so there's $${remaining} left to go. Playthrough counts each time you place a lineup or make a Predict Market buy after that deposit, and it still counts even if that entry is later refunded — you won't lose credit there. Once you hit $${req} in play, the funds will be cleared for withdrawal (also subject to the standard 72-hour hold if this was funded by bank transfer). Let me know if you have any questions!`;
+  }
+
+  box.className = 'spiel-box';
+  box.textContent = text;
+  document.getElementById('copyBtn').classList.remove('copied');
+  document.getElementById('copyBtn').textContent = 'Copy to clipboard';
+}
+
+function copySpiel(){
+  const box = document.getElementById('spielBox');
+  if (!lastResult) return;
+  navigator.clipboard.writeText(box.textContent).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.classList.add('copied');
+    btn.textContent = 'Copied ✓';
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.textContent = 'Copy to clipboard';
+    }, 1800);
+  });
+}
+
+function clearAll(){
+  document.getElementById('txInput').value = '';
+  document.getElementById('memberName').value = '';
+  document.getElementById('emptyState').style.display = 'block';
+  document.getElementById('resultsBody').style.display = 'none';
+  lastResult = null;
+  renderSpiel();
+}
+</script>
+
+</body>
+</html>
