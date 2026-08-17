@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Playthrough Requirement Check</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <div class="brandbar">
+    <div class="brand">
+      <div class="brand-mark">P</div>
+      <div class="brand-text">
+        <div class="brand-name">PRIZEPICKS</div>
+        <div class="brand-sub">Playthrough Tracker</div>
+      </div>
+    </div>
+    <div class="brandbar-tag"><span class="dot"></span>Internal Tool</div>
+  </div>
+
+  <div style="background: var(--bad-soft); border: 1px solid var(--bad); border-radius: 10px; padding: 12px 16px; margin-bottom: 28px; font-family:'JetBrains Mono', monospace; font-size: 12.5px; letter-spacing: 0.02em; color: var(--bad); text-align:center; text-transform: uppercase;">
+    ⚠ For internal use only &mdash; do not screenshot
+  </div>
+
+  <header>
+    <div class="eyebrow">Playthrough Tracker</div>
+    <h1>Playthrough Requirement Check</h1>
+    <p>Every deposit &mdash; bonus or not &mdash; requires a 1x playthrough before it can be withdrawn. Paste your transaction history below: this tool breaks the requirement out <b>per deposit</b> so you can see exactly which deposits are cleared, which are still pending, and flags any withdrawal that happened before its deposit finished playthrough.</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- INPUT PANEL -->
+    <div class="panel">
+      <h2>Paste your transactions</h2>
+      <p class="sub">Copy the rows straight from the Transactions table and paste them here &mdash; formatting is handled automatically.</p>
+      <label for="txInput">Transaction history</label>
+      <textarea id="txInput" placeholder="3256749390&#9;-$1&#10;lineup placed&#10;Credit&#10;$36&#9;-$0&#10;August 16, 2026&#10;6:25:59 PM ET&#10;1740390486&#10;&#10;..."></textarea>
+
+      <button class="primary" onclick="calculate()">Calculate playthrough</button>
+      <button class="clear-btn" onclick="clearAll()">Clear</button>
+    </div>
+
+    <!-- RESULTS PANEL -->
+    <div class="panel" id="resultsPanel">
+      <h2>Progress</h2>
+      <p class="sub">Based on your most recent deposit. Every deposit's own status is listed individually below.</p>
+
+      <div id="emptyState" class="empty-state">
+        <div class="big">Nothing calculated yet</div>
+        Paste your transactions and hit Calculate.
+      </div>
+
+      <div id="resultsBody" style="display:none;">
+        <div class="ring-row">
+          <div class="ring-wrap">
+            <svg class="ring" width="128" height="128" viewBox="0 0 128 128">
+              <circle class="ring-bg" cx="64" cy="64" r="54"></circle>
+              <circle class="ring-fg" id="ringFg" cx="64" cy="64" r="54" stroke-dasharray="339.29" stroke-dashoffset="339.29"></circle>
+            </svg>
+            <div class="ring-center">
+              <div class="ring-pct" id="ringPct">0%</div>
+              <div class="ring-label">Cleared</div>
+            </div>
+          </div>
+          <div class="status-block">
+            <div class="status pending" id="statusLine">&mdash;</div>
+            <div class="detail" id="statusDetail">&mdash;</div>
+          </div>
+        </div>
+
+        <div class="stat-row">
+          <div class="stat">
+            <div class="k">Requirement</div>
+            <div class="v" id="statReq">$0.00</div>
+          </div>
+          <div class="stat">
+            <div class="k">Played through</div>
+            <div class="v accent" id="statPlayed">$0.00</div>
+          </div>
+          <div class="stat">
+            <div class="k">Remaining</div>
+            <div class="v amber" id="statRemaining">$0.00</div>
+          </div>
+        </div>
+
+        <div id="withdrawalWarning" style="display:none; background: var(--bad-soft); border: 1px solid var(--bad); border-radius: 10px; padding: 14px 16px; margin-bottom: 22px; font-size: 13px; line-height: 1.6; color: var(--text);"></div>
+
+        <div class="section-title">
+          Deposits &mdash; playthrough by deposit
+          <span class="count" id="depositCount">0</span>
+        </div>
+        <p class="section-note">Each deposit is tracked independently: play activity only credits whichever deposit was most recent at the time it happened. If a newer deposit comes in, an older deposit's unmet remaining is <b>not</b> backfilled by later play.</p>
+        <div class="scroll-box">
+          <table id="depositTable">
+            <thead><tr><th>ID</th><th>Amount</th><th>Played</th><th>Remaining</th><th>Status</th><th>Time</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="section-title">
+          Withdrawals before playthrough complete
+          <span class="count" id="flaggedCount">0</span>
+        </div>
+        <p class="section-note">Withdrawals that were made while one or more deposits still had an outstanding playthrough requirement.</p>
+        <div class="scroll-box">
+          <table id="flaggedTable">
+            <thead><tr><th>ID</th><th>Withdrawal amt</th><th>Outstanding at the time</th><th>Time</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="section-title">
+          Counted toward playthrough
+          <span class="count" id="countedCount">0</span>
+        </div>
+        <p class="section-note">Every Lineup Placed and Predict Market Buy. Both count in full even if later refunded.</p>
+        <div class="scroll-box">
+          <table id="countedTable">
+            <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Time</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="section-title">
+          Refunded lineups (still count in full)
+          <span class="count" id="refundCount">0</span>
+        </div>
+        <p class="section-note">These credited money back to the balance, but the original playthrough credit above is not reduced.</p>
+        <div class="scroll-box">
+          <table id="refundTable">
+            <thead><tr><th>ID</th><th>Amount</th><th>Time</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+
+        <div class="section-title">
+          Excluded &mdash; not playthrough eligible
+          <span class="count" id="excludedCount">0</span>
+        </div>
+        <div class="scroll-box">
+          <table id="excludedTable">
+            <thead><tr><th>ID</th><th>Type</th><th>Amount</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SPIEL GENERATOR -->
+  <div class="panel full">
+    <div class="spiel-head">
+      <div>
+        <h2>Member spiel generator</h2>
+        <p class="sub" style="margin-bottom:0;">Calculate a member's playthrough above, then generate a ready-to-send explanation.</p>
+      </div>
+      <div class="name-field">
+        <label for="memberName">Member name</label>
+        <input class="text-input" id="memberName" type="text" placeholder="there" oninput="renderSpiel()">
+      </div>
+    </div>
+
+    <div class="toggle-row" style="margin-bottom:16px;">
+      <button class="toggle-btn active" id="btnPending" onclick="setSpielMode('pending')">Still needs playthrough</button>
+      <button class="toggle-btn" id="btnCleared" onclick="setSpielMode('cleared')">Cleared / eligible</button>
+    </div>
+
+    <div class="spiel-box empty" id="spielBox">Calculate a member's transactions above to generate a spiel.</div>
+    <button class="copy-btn" id="copyBtn" onclick="copySpiel()">Copy to clipboard</button>
+  </div>
+
+  <div class="footnote">
+    <b>How this is calculated:</b> every deposit requires a 1x playthrough before it's eligible for withdrawal, whether or not it carried a Deposit Bonus. The <b>Progress</b> panel above reflects your <b>most recent deposit only</b>. The <b>Deposits</b> table tracks every deposit independently: play activity (<b>Lineup Placed</b> and <b>Predict Market Buy</b>) only credits whichever deposit was the most recent one at the time &mdash; once a newer deposit comes in, later play stops crediting the older one, so an older deposit's remaining amount is never backfilled by later play. If a lineup is later refunded, the amount already credited toward playthrough is not clawed back. Any <b>Withdrawal</b> that happened while any deposit still had an outstanding requirement is called out separately below, since that's a case where funds went out before playthrough on a deposit was fully met. <b>Withdrawal Refund</b> entries are excluded since the funds never actually left the account. If a deposit was made via bank transfer, remember it's also subject to a separate 72-hour security hold regardless of playthrough status.
+  </div>
+
+</div>
+
+<script src="js/script.js"></script>
+
+</body>
+</html>
