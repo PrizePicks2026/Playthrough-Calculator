@@ -1,5 +1,4 @@
 let lastResult = null;
-let spielMode = 'pending';
 
 function parseTransactions(raw){
   const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
@@ -104,13 +103,24 @@ function calculate(){
     return b.order - a.order;
   });
 
-  // Independent per-deposit tracking: play activity only ever credits
-  // whichever deposit was most recently made at the time it happened.
-  // Once a new deposit comes in, later play credits that new deposit —
-  // any leftover/remaining requirement on an older deposit is NOT carried
-  // forward or backfilled by later play. Each deposit stands on its own.
+  // Independent per-deposit tracking (used for the Deposits table below):
+  // play activity only ever credits whichever deposit was most recently
+  // made at the time it happened. Once a new deposit comes in, later play
+  // credits that new deposit — any leftover/remaining requirement on an
+  // older deposit is NOT carried forward or backfilled by later play.
+  // Each deposit stands on its own, purely for transparency into each
+  // deposit's individual status.
+  //
+  // A lineup refund reverses the credit that lineup earned — the member
+  // needs to play that amount through again, so it's subtracted back out
+  // of whichever deposit was current at the time.
+  //
+  // Withdrawals are matched against later Withdrawal Refunds (same amount)
+  // to tell a "successful" withdrawal (money actually left, never reversed)
+  // apart from an attempted one that bounced back.
   const allDeposits = [];
   const flaggedWithdrawals = [];
+  const openWithdrawals = [];
   let currentDeposit = null;
 
   chronological.forEach(r => {
@@ -123,30 +133,69 @@ function calculate(){
         currentDeposit.played += Math.abs(r.amount);
       }
       // play activity before any deposit has ever been made has nothing to credit.
+    } else if (r.kind === 'lineupRefund'){
+      if (currentDeposit){
+        currentDeposit.played = Math.max(0, currentDeposit.played - Math.abs(r.amount));
+      }
     } else if (r.kind === 'withdrawal'){
       const outstanding = allDeposits.reduce((sum, d) => sum + Math.max(0, d.amount - d.played), 0);
       if (outstanding > 0.005){
         flaggedWithdrawals.push({ ref: r, outstanding });
       }
+      openWithdrawals.push(r);
+    } else if (r.kind === 'withdrawalRefund'){
+      const amt = Math.abs(r.amount);
+      const matchIdx = openWithdrawals.findIndex(w => Math.abs(w.amount) === amt);
+      if (matchIdx !== -1) openWithdrawals.splice(matchIdx, 1);
     }
   });
 
+  // Anything left in openWithdrawals was never matched to a refund — it
+  // actually went through successfully.
+  const successfulWithdrawals = new Set(openWithdrawals);
+  const successfulWithdrawalExists = openWithdrawals.length > 0;
+
   allDeposits.forEach(d => {
+    d.playedCapped = Math.min(d.played, d.amount);
     d.remaining = Math.max(0, d.amount - d.played);
     d.cleared = d.remaining <= 0.005;
   });
 
-  // The Progress panel reflects the latest deposit only — not a sum across
-  // every deposit. Older deposits (and any still-pending amounts on them)
-  // are visible individually in the deposits table below.
-  const latestDeposit = allDeposits[allDeposits.length - 1];
-  const requirement = latestDeposit.amount;
-  const played = Math.min(latestDeposit.played, requirement);
-  const remaining = latestDeposit.remaining;
-  const cleared = latestDeposit.cleared;
-  const pct = requirement > 0 ? Math.min(100, (played / requirement) * 100) : 0;
+  // Progress panel: deposits STACK into one running requirement (each new
+  // deposit adds its amount on top of whatever's still owed), and play
+  // activity stacks the same way against that running total — reversed
+  // (refunded) withdrawals have no effect at all. But the moment a
+  // withdrawal actually goes through successfully, the amount played so
+  // far resets to zero, and whatever was still outstanding at that moment
+  // gets reduced by the withdrawal amount — that leftover then carries
+  // forward and stacks with the next deposit.
+  let stackRequirement = 0;
+  let stackPlayed = 0;
 
-  lastResult = { requirement, played, remaining, cleared, flaggedWithdrawals };
+  chronological.forEach(r => {
+    if (r.kind === 'deposit'){
+      stackRequirement += Math.abs(r.amount);
+    } else if (r.kind === 'play'){
+      stackPlayed += Math.abs(r.amount);
+    } else if (r.kind === 'lineupRefund'){
+      stackPlayed = Math.max(0, stackPlayed - Math.abs(r.amount));
+    } else if (r.kind === 'withdrawal'){
+      if (successfulWithdrawals.has(r)){
+        const remainingNow = Math.max(0, stackRequirement - stackPlayed);
+        stackRequirement = Math.max(0, remainingNow - Math.abs(r.amount));
+        stackPlayed = 0;
+      }
+      // a withdrawal that later gets reversed (refunded) never touches the stack.
+    }
+  });
+
+  const requirement = stackRequirement;
+  const remaining = Math.max(0, requirement - stackPlayed);
+  const played = Math.max(0, requirement - remaining);
+  const cleared = remaining <= 0.005;
+  const pct = requirement > 0 ? Math.min(100, (played / requirement) * 100) : 100;
+
+  lastResult = { requirement, played, remaining, cleared, flaggedWithdrawals, successfulWithdrawalExists };
 
   // Ring
   const circumference = 339.29;
@@ -161,11 +210,11 @@ function calculate(){
   if (cleared){
     statusLine.className = 'status cleared';
     statusLine.textContent = '✓ Playthrough cleared';
-    statusDetail.innerHTML = `Played through <b>$${played.toFixed(2)}</b> of the required <b>$${requirement.toFixed(2)}</b> on the most recent deposit. Eligible for withdrawal (subject to any active 72-hour hold).`;
+    statusDetail.innerHTML = `Played through <b>$${played.toFixed(2)}</b> of the required <b>$${requirement.toFixed(2)}</b> currently owed. Eligible for withdrawal (subject to any active 72-hour hold).`;
   } else {
     statusLine.className = 'status pending';
     statusLine.textContent = 'Playthrough in progress';
-    statusDetail.innerHTML = `Still needs <b>$${remaining.toFixed(2)}</b> more in play on the most recent deposit before those funds clear for withdrawal.`;
+    statusDetail.innerHTML = `Still needs <b>$${remaining.toFixed(2)}</b> more in play before those funds clear for withdrawal. Deposits stack onto this total, and a successful withdrawal resets progress and carries forward whatever was still owed.`;
   }
 
   document.getElementById('statReq').textContent = '$' + requirement.toFixed(2);
@@ -195,7 +244,7 @@ function calculate(){
     <tr>
       <td class="id">${d.ref.id}</td>
       <td class="amt pos">+$${d.amount.toFixed(2)}</td>
-      <td class="amt accent">$${d.played.toFixed(2)}</td>
+      <td class="amt accent">$${d.playedCapped.toFixed(2)}</td>
       <td class="amt ${isCleared ? '' : 'neg'}">$${d.remaining.toFixed(2)}</td>
       <td>${isCleared ? '<span class="tag" style="background:var(--good-soft); color:var(--good);">Cleared</span>' : '<span class="tag" style="background:var(--bad-soft); color:var(--bad);">Pending</span>'}</td>
       <td class="time">${d.ref.time}</td>
@@ -248,14 +297,8 @@ function calculate(){
 
   document.getElementById('emptyState').style.display = 'none';
   document.getElementById('resultsBody').style.display = 'block';
+  document.getElementById('spielPanel').style.display = cleared ? 'none' : 'block';
 
-  setSpielMode(cleared ? 'cleared' : 'pending');
-}
-
-function setSpielMode(mode){
-  spielMode = mode;
-  document.getElementById('btnPending').classList.toggle('active', mode === 'pending');
-  document.getElementById('btnCleared').classList.toggle('active', mode === 'cleared');
   renderSpiel();
 }
 
@@ -272,16 +315,9 @@ function renderSpiel(){
   const played = lastResult.played.toFixed(2);
   const remaining = lastResult.remaining.toFixed(2);
 
-  let text = '';
-  if (spielMode === 'cleared'){
-    text = `Hi ${name}, thanks for reaching out! Good news — your most recent deposit has cleared its playthrough requirement. Every deposit needs a 1x playthrough before it's eligible for withdrawal, and you've played through $${played} against the $${req} required on that deposit, so you're all set on that front.
+  const text = `Hi ${name}, thanks for reaching out about your withdrawal. Every deposit requires a 1x playthrough before those funds become eligible to withdraw — right now that's $${req} still required.
 
-If this deposit came in via bank transfer, keep in mind funds are also subject to a standard 72-hour security hold, separate from playthrough. Outside of that, you're clear to withdraw. Let me know if you have any other questions!`;
-  } else {
-    text = `Hi ${name}, thanks for reaching out about your withdrawal. Every deposit requires a 1x playthrough before those funds become eligible to withdraw — for your most recent deposit, that's $${req} required.
-
-Right now you've played through $${played}, so there's $${remaining} left to go. Playthrough counts each time you place a lineup or make a Predict Market buy after that deposit, and it still counts even if that entry is later refunded — you won't lose credit there. Once you hit $${req} in play, the funds will be cleared for withdrawal (also subject to the standard 72-hour hold if this was funded by bank transfer). Let me know if you have any questions!`;
-  }
+You've played through $${played} so far, so there's $${remaining} left to go. Playthrough counts each time you place a lineup or make a Predict Market buy — if a lineup is later refunded, that amount goes back to needing to be played through again, so a win doesn't need replaying but a refund does. Once you hit $${req} in play, the funds will be cleared for withdrawal (also subject to the standard 72-hour hold if this was funded by bank transfer). Let me know if you have any questions!`;
 
   box.className = 'spiel-box';
   box.textContent = text;
@@ -308,6 +344,7 @@ function clearAll(){
   document.getElementById('memberName').value = '';
   document.getElementById('emptyState').style.display = 'block';
   document.getElementById('resultsBody').style.display = 'none';
+  document.getElementById('spielPanel').style.display = 'none';
   lastResult = null;
   renderSpiel();
 }

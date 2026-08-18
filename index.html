@@ -6,7 +6,7 @@
 <title>Playthrough Requirement Check</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="wrap">
@@ -19,10 +19,7 @@
         <div class="brand-sub">Playthrough Tracker</div>
       </div>
     </div>
-    <div class="brandbar-right">
-      <a class="reboots-btn" href="https://prizepicks2026.github.io/Reboots-Policy/" target="_blank" rel="noopener noreferrer">Reboots Policy</a>
-      <div class="brandbar-tag"><span class="dot"></span>Internal Tool</div>
-    </div>
+    <div class="brandbar-tag"><span class="dot"></span>Internal Tool</div>
   </div>
 
   <div style="background: var(--bad-soft); border: 1px solid var(--bad); border-radius: 10px; padding: 12px 16px; margin-bottom: 28px; font-family:'JetBrains Mono', monospace; font-size: 12.5px; letter-spacing: 0.02em; color: var(--bad); text-align:center; text-transform: uppercase;">
@@ -51,7 +48,7 @@
     <!-- RESULTS PANEL -->
     <div class="panel" id="resultsPanel">
       <h2>Progress</h2>
-      <p class="sub">Based on your most recent deposit. Every deposit's own status is listed individually below.</p>
+      <p class="sub">Deposits stack into one running total owed. A successful withdrawal resets progress and carries the leftover forward onto the next deposit. Every deposit's own status is still listed individually below.</p>
 
       <div id="emptyState" class="empty-state">
         <div class="big">Nothing calculated yet</div>
@@ -97,7 +94,7 @@
           Deposits &mdash; playthrough by deposit
           <span class="count" id="depositCount">0</span>
         </div>
-        <p class="section-note">Each deposit is tracked independently: play activity only credits whichever deposit was most recent at the time it happened. If a newer deposit comes in, an older deposit's unmet remaining is <b>not</b> backfilled by later play.</p>
+        <p class="section-note">Each deposit is tracked independently: play activity only credits whichever deposit was most recent at the time it happened, and a refunded lineup's amount is subtracted back out. If a newer deposit comes in, an older deposit's unmet remaining is <b>not</b> backfilled by later play.</p>
         <div class="scroll-box">
           <table id="depositTable">
             <thead><tr><th>ID</th><th>Amount</th><th>Played</th><th>Remaining</th><th>Status</th><th>Time</th></tr></thead>
@@ -121,7 +118,7 @@
           Counted toward playthrough
           <span class="count" id="countedCount">0</span>
         </div>
-        <p class="section-note">Every Lineup Placed and Predict Market Buy. Both count in full even if later refunded.</p>
+        <p class="section-note">Every Lineup Placed and Predict Market Buy. A lineup's credit is reversed if it's later refunded (see below) — a win does not need to be replayed.</p>
         <div class="scroll-box">
           <table id="countedTable">
             <thead><tr><th>ID</th><th>Type</th><th>Amount</th><th>Time</th></tr></thead>
@@ -130,10 +127,10 @@
         </div>
 
         <div class="section-title">
-          Refunded lineups (still count in full)
+          Refunded lineups (must be played through again)
           <span class="count" id="refundCount">0</span>
         </div>
-        <p class="section-note">These credited money back to the balance, but the original playthrough credit above is not reduced.</p>
+        <p class="section-note">A refunded lineup's amount is subtracted back out of the played total for the deposit it belonged to — that money still needs to be played through.</p>
         <div class="scroll-box">
           <table id="refundTable">
             <thead><tr><th>ID</th><th>Amount</th><th>Time</th></tr></thead>
@@ -157,7 +154,7 @@
   </div>
 
   <!-- SPIEL GENERATOR -->
-  <div class="panel full">
+  <div class="panel full" id="spielPanel" style="display:none;">
     <div class="spiel-head">
       <div>
         <h2>Member spiel generator</h2>
@@ -169,22 +166,17 @@
       </div>
     </div>
 
-    <div class="toggle-row" style="margin-bottom:16px;">
-      <button class="toggle-btn active" id="btnPending" onclick="setSpielMode('pending')">Still needs playthrough</button>
-      <button class="toggle-btn" id="btnCleared" onclick="setSpielMode('cleared')">Cleared / eligible</button>
-    </div>
-
     <div class="spiel-box empty" id="spielBox">Calculate a member's transactions above to generate a spiel.</div>
     <button class="copy-btn" id="copyBtn" onclick="copySpiel()">Copy to clipboard</button>
   </div>
 
   <div class="footnote">
-    <b>How this is calculated:</b> every deposit requires a 1x playthrough before it's eligible for withdrawal, whether or not it carried a Deposit Bonus. The <b>Progress</b> panel above reflects your <b>most recent deposit only</b>. The <b>Deposits</b> table tracks every deposit independently: play activity (<b>Lineup Placed</b> and <b>Predict Market Buy</b>) only credits whichever deposit was the most recent one at the time &mdash; once a newer deposit comes in, later play stops crediting the older one, so an older deposit's remaining amount is never backfilled by later play. If a lineup is later refunded, the amount already credited toward playthrough is not clawed back. Any <b>Withdrawal</b> that happened while any deposit still had an outstanding requirement is called out separately below, since that's a case where funds went out before playthrough on a deposit was fully met. <b>Withdrawal Refund</b> entries are excluded since the funds never actually left the account. If a deposit was made via bank transfer, remember it's also subject to a separate 72-hour security hold regardless of playthrough status.
+    <b>How this is calculated:</b> every deposit requires a 1x playthrough before it's eligible for withdrawal, whether or not it carried a Deposit Bonus. The <b>Progress</b> panel above stacks every deposit into one running total owed, and play stacks against it the same way &mdash; but the moment a withdrawal actually goes through successfully (an attempted one that came back as a <b>Withdrawal Refund</b> doesn't count), played progress resets to zero and whatever was still owed at that moment is reduced by the withdrawal amount, then carries forward and stacks onto the next deposit. The <b>Deposits</b> table below is separate and always tracks every deposit independently, for transparency into each one on its own: play activity (<b>Lineup Placed</b> and <b>Predict Market Buy</b>) only credits whichever deposit was the most recent one at the time &mdash; once a newer deposit comes in, later play stops crediting the older one, so an older deposit's remaining amount is never backfilled by later play. If a lineup is later refunded, that amount is subtracted back out of the played total in both places, since the member needs to play it through again. <b>Lineup wins do not need to be replayed</b> &mdash; only refunded/voided lineups do. Any <b>Withdrawal</b> that happened while any deposit still had an outstanding requirement is called out separately below. If a deposit was made via bank transfer, remember it's also subject to a separate 72-hour security hold regardless of playthrough status.
   </div>
 
 </div>
 
-<script src="js/script.js"></script>
+<script src="script.js"></script>
 
 </body>
 </html>
